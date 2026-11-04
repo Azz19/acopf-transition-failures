@@ -11,7 +11,7 @@ res=[r for r in pickle.load(open(f"data_{name}.pkl","rb")) if r and r["ok"]]
 rand=[r for r in res if r["kind"]=="rand"]; path=[r for r in res if r["kind"]=="path"]
 train,test=rand[:ntrain],rand[ntrain:]; allS=test+path; n=len(test)
 ev=pickle.load(open(f"eval_{name}.pkl","rb")); mn=list(ev)
-g=case["gen"];nb,ng,nl=case["bus"].shape[0],g.shape[0],case["branch"].shape[0]; gb=(g[:,0]-1).astype(int)
+g=case["gen"];nb,ng,nl=case["bus"].shape[0],g.shape[0],case["branch"].shape[0]; _ids={int(b):i for i,b in enumerate(case["bus"][:,0])}; gb=np.array([_ids[int(x)] for x in g[:,0]])
 typ=np.array(["Pmax"]*ng+["Pmin"]*ng+["Qmax"]*ng+["Qmin"]*ng+["Vmax"]*nb+["Vmin"]*nb+["Sf"]*nl+["St"]*nl)
 pr=np.maximum(g[:,PMAX]-g[:,PMIN],1.0);qr=np.maximum(g[:,QMAX]-g[:,QMIN],1.0)
 rate=case["branch"][:,RATE_A].copy()

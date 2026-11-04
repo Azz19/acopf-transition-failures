@@ -15,7 +15,7 @@ train,test=rand[:ntrain],rand[ntrain:]
 g=case["gen"]; ldb=np.where((case["bus"][:,PD]!=0)|(case["bus"][:,QD]!=0))[0]
 X=lambda S: np.array([np.r_[r["pd"][ldb],r["qd"][ldb]] for r in S])
 Y=lambda S: np.array([np.r_[r["pg"],r["vg"]] for r in S])
-ng=g.shape[0]; lb=np.r_[g[:,PMIN],case["bus"][(g[:,0]-1).astype(int),VMIN]]; ub=np.r_[g[:,PMAX],case["bus"][(g[:,0]-1).astype(int),VMAX]]
+ng=g.shape[0]; _ids={int(b):i for i,b in enumerate(case["bus"][:,0])}; gb=np.array([_ids[int(x)] for x in g[:,0]]); lb=np.r_[g[:,PMIN],case["bus"][gb,VMIN]]; ub=np.r_[g[:,PMAX],case["bus"][gb,VMAX]]
 gc=case["gencost"]
 def cost(pg): return float(np.sum(gc[:,4]*pg**2+gc[:,5]*pg+gc[:,6]))
 def recover(a):
@@ -23,7 +23,7 @@ def recover(a):
     c={k:(v.copy() if hasattr(v,"copy") else v) for k,v in case.items()}
     c["bus"][:,PD]=pd; c["bus"][:,QD]=qd
     c["gen"][:,PG]=yh[:ng]; c["gen"][:,VG]=yh[ng:]
-    c["bus"][(g[:,0]-1).astype(int),VM]=yh[ng:]
+    c["bus"][gb,VM]=yh[ng:]
     try:
         r,ok=runpf(c,PF_OPT)
     except Exception:

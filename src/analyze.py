@@ -11,7 +11,7 @@ rand=[r for r in res if r["kind"]=="rand"]; path=[r for r in res if r["kind"]=="
 train,test=rand[:ntrain],rand[ntrain:]; allS=test+path
 ev=pickle.load(open(f"eval_{name}.pkl","rb"))
 g=case["gen"]; nb,ng,nl=case["bus"].shape[0],g.shape[0],case["branch"].shape[0]
-gb=(g[:,0]-1).astype(int)
+_ids={int(b):i for i,b in enumerate(case["bus"][:,0])}; gb=np.array([_ids[int(x)] for x in g[:,0]])
 # Constraint order Pmax,Pmin,Qmax,Qmin,Vmax,Vmin,Sf,St
 typ=np.array(["Pmax"]*ng+["Pmin"]*ng+["Qmax"]*ng+["Qmin"]*ng+["Vmax"]*nb+["Vmin"]*nb+["Sf"]*nl+["St"]*nl)
 slack_g=np.where(case["bus"][gb,1]==3)[0]
