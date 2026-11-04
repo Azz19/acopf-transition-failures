@@ -5,7 +5,7 @@ any unsolved point are replaced, and those replacements are counted in the metad
 Reruns resume from the checkpoint with the same arguments.
 
 Example:
-    python gen_ipopt.py 300_ieee --random 3000 --paths 50 --points 41 --workers 3
+    python gen_ipopt.py 300_ieee --random 2400 --paths 50 --points 41 --load-max 1.05 --workers 3
 """
 import argparse
 import json
@@ -26,19 +26,22 @@ import ipopt_backend
 from common import PD, PG, QD, QG, VG, VM, LAM_P, active_vector, load_case, slacks, solve
 
 _case = None
+_load_range = (0.85, 1.15)
 
 
-def _init_worker(case_path):
+def _init_worker(case_path, load_range, max_iter):
     """Load the case and select Ipopt once in each worker process."""
-    global _case
+    global _case, _load_range
     _case = load_case(case_path)
+    _load_range = load_range
+    ipopt_backend.IPOPT_OPTIONS["max_iter"] = max_iter
     ipopt_backend.install()
 
 
 def _draw(rng):
-    """Pilot sampling: global U(0.85, 1.15) times per-load U(0.9, 1.1)."""
+    """Pilot sampling: a global load factor times per-load U(0.9, 1.1)."""
     pd0, qd0 = _case["bus"][:, PD], _case["bus"][:, QD]
-    b = rng.uniform(0.85, 1.15)
+    b = rng.uniform(*_load_range)
     return pd0 * b * rng.uniform(0.9, 1.1, pd0.size), qd0 * b * rng.uniform(0.9, 1.1, pd0.size)
 
 
@@ -92,6 +95,9 @@ def main():
     ap.add_argument("--paths", type=int, default=50, help="complete paths wanted")
     ap.add_argument("--points", type=int, default=41, help="points per path; the pilot used 41")
     ap.add_argument("--seed", type=int, default=2027)
+    ap.add_argument("--load-min", type=float, default=0.85, help="lower global load factor")
+    ap.add_argument("--load-max", type=float, default=1.15, help="upper global load factor")
+    ap.add_argument("--max-iter", type=int, default=100, help="Ipopt iteration cap; unsolved instances stop here")
     ap.add_argument("--workers", type=int, default=max(1, (os.cpu_count() or 2) - 1))
     ap.add_argument("--max-attempt-factor", type=float, default=4.0, help="stop after this many times the target attempts")
     ap.add_argument("--pglib-dir", default=os.environ.get("PGLIB_DIR", "pglib-opf"))
@@ -104,7 +110,8 @@ def main():
     os.makedirs(args.out_dir, exist_ok=True)
     final = os.path.join(args.out_dir, f"data_{args.case}.pkl")
     ckpt = os.path.join(args.out_dir, f"data_{args.case}.ckpt")
-    config = dict(case=args.case, random=args.random, paths=args.paths, points=args.points, seed=args.seed)
+    config = dict(case=args.case, random=args.random, paths=args.paths, points=args.points, seed=args.seed,
+                  load_min=args.load_min, load_max=args.load_max, max_iter=args.max_iter)
 
     state = dict(config=config, rand=[], paths=[], rand_attempts=0, path_attempts=0, path_fail_at=[], elapsed=0.0)
     if os.path.exists(ckpt):
@@ -116,7 +123,7 @@ def main():
         print(f"Resuming: {sum(r['ok'] for r in state['rand'])} random, {len(state['paths'])} paths", flush=True)
 
     t0 = time.time()
-    with mp.Pool(args.workers, initializer=_init_worker, initargs=(case_path,)) as pool:
+    with mp.Pool(args.workers, initializer=_init_worker, initargs=(case_path, (args.load_min, args.load_max), args.max_iter)) as pool:
         # Random instances, in attempt order so the training split is reproducible.
         max_rand = int(args.random * args.max_attempt_factor)
         while sum(r["ok"] for r in state["rand"]) < args.random and state["rand_attempts"] < max_rand:
@@ -159,7 +166,7 @@ def main():
 
     import cyipopt
     meta = dict(config=config, solver="Ipopt via cyipopt", ipopt_version=list(cyipopt.IPOPT_VERSION),
-                options=ipopt_backend.IPOPT_OPTIONS, python=platform.python_version(),
+                options={**ipopt_backend.IPOPT_OPTIONS, "max_iter": args.max_iter}, python=platform.python_version(),
                 random_solved=len(rand_ok), random_attempts=state["rand_attempts"],
                 paths_complete=min(len(state["paths"]), args.paths), path_attempts=state["path_attempts"],
                 failed_path_stop_points=state["path_fail_at"], elapsed_seconds=round(state["elapsed"], 1))
