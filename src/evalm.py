@@ -1,5 +1,5 @@
 """Train surrogates, recover via AC PF, save per-sample and per-constraint results."""
-import os, sys, warnings, pickle, time
+import os, sys, warnings, pickle, time, json
 os.environ["OMP_NUM_THREADS"]="1"; os.environ["OPENBLAS_NUM_THREADS"]="1"
 warnings.filterwarnings("ignore")
 import numpy as np, multiprocessing as mp
@@ -33,10 +33,13 @@ def recover(a):
 if __name__=="__main__":
     Xs=StandardScaler().fit(X(train)); Ys=StandardScaler().fit(Y(train))
     Xtr,Ytr=Xs.transform(X(train)),Ys.transform(Y(train))
-    models={"ridge":Ridge(alpha=1.0)}
+    # Optional third argument: tuned_<case>.json from tune.py. Without it, pilot defaults apply.
+    tuned=json.load(open(sys.argv[3]))["best"] if len(sys.argv)>3 else {}
+    pr=lambda f,d:{**d,**{k:(tuple(v) if isinstance(v,list) else v) for k,v in tuned.get(f,{}).items()}}
+    models={"ridge":Ridge(**pr("ridge",{"alpha":1.0}))}
     for sd in range(3):
-        models[f"mlp64_s{sd}"]=MLPRegressor(hidden_layer_sizes=(64,),max_iter=600,early_stopping=True,random_state=sd,n_iter_no_change=30)
-        models[f"mlp256_s{sd}"]=MLPRegressor(hidden_layer_sizes=(256,256),max_iter=600,early_stopping=True,random_state=sd,n_iter_no_change=30)
+        models[f"mlp64_s{sd}"]=MLPRegressor(**pr("mlp64",{"hidden_layer_sizes":(64,),"max_iter":600,"early_stopping":True,"n_iter_no_change":30}),random_state=sd)
+        models[f"mlp256_s{sd}"]=MLPRegressor(**pr("mlp256",{"hidden_layer_sizes":(256,256),"max_iter":600,"early_stopping":True,"n_iter_no_change":30}),random_state=sd)
     out={}
     allS=test+path
     Xa=Xs.transform(X(allS)); Ya=Y(allS)

@@ -1,0 +1,342 @@
+{
+ "best": {
+  "ridge": {
+   "alpha": 100.0
+  },
+  "mlp64": {
+   "hidden_layer_sizes": [
+    64
+   ],
+   "alpha": 1e-05,
+   "learning_rate_init": 0.0003,
+   "early_stopping": false,
+   "max_iter": 1500,
+   "tol": 0.0
+  },
+  "mlp256": {
+   "hidden_layer_sizes": [
+    256,
+    256
+   ],
+   "alpha": 0.1,
+   "learning_rate_init": 0.001,
+   "early_stopping": false,
+   "max_iter": 1500,
+   "tol": 0.0
+  }
+ },
+ "n_fit": 1530,
+ "n_val": 270,
+ "records": [
+  {
+   "family": "ridge",
+   "params": {
+    "alpha": 0.01
+   },
+   "val_q_mvar": 31.80479501762501,
+   "nonconverged": 0.0,
+   "val_mae_pg_pct": 0.44966252730655754,
+   "val_mae_vg_pu": 0.0020682996215508212,
+   "seconds": 1.4
+  },
+  {
+   "family": "ridge",
+   "params": {
+    "alpha": 0.1
+   },
+   "val_q_mvar": 31.80337558004937,
+   "nonconverged": 0.0,
+   "val_mae_pg_pct": 0.449658345361707,
+   "val_mae_vg_pu": 0.002068251590919721,
+   "seconds": 1.3
+  },
+  {
+   "family": "ridge",
+   "params": {
+    "alpha": 1.0
+   },
+   "val_q_mvar": 31.789367952981532,
+   "nonconverged": 0.0,
+   "val_mae_pg_pct": 0.44961845326220673,
+   "val_mae_vg_pu": 0.0020677747097456027,
+   "seconds": 1.2
+  },
+  {
+   "family": "ridge",
+   "params": {
+    "alpha": 10.0
+   },
+   "val_q_mvar": 31.67852749287337,
+   "nonconverged": 0.0,
+   "val_mae_pg_pct": 0.44933759019660446,
+   "val_mae_vg_pu": 0.0020633953450648213,
+   "seconds": 1.4
+  },
+  {
+   "family": "ridge",
+   "params": {
+    "alpha": 100.0
+   },
+   "val_q_mvar": 31.62483774149828,
+   "nonconverged": 0.0,
+   "val_mae_pg_pct": 0.45240225163697906,
+   "val_mae_vg_pu": 0.002042037527630694,
+   "seconds": 1.4
+  },
+  {
+   "family": "mlp64",
+   "params": {
+    "hidden_layer_sizes": [
+     64
+    ],
+    "early_stopping": true,
+    "max_iter": 600,
+    "n_iter_no_change": 30
+   },
+   "val_q_mvar": 143.85926321133954,
+   "nonconverged": 0.0,
+   "val_mae_pg_pct": 0.4782058379899494,
+   "val_mae_vg_pu": 0.0020779871689455723,
+   "seconds": 2.0
+  },
+  {
+   "family": "mlp64",
+   "params": {
+    "hidden_layer_sizes": [
+     64
+    ],
+    "alpha": 1e-05,
+    "learning_rate_init": 0.001,
+    "early_stopping": false,
+    "max_iter": 1500,
+    "tol": 0.0
+   },
+   "val_q_mvar": 21.850361389728054,
+   "nonconverged": 0.0,
+   "val_mae_pg_pct": 0.16765908647556013,
+   "val_mae_vg_pu": 0.0009899037544417089,
+   "seconds": 6.0
+  },
+  {
+   "family": "mlp64",
+   "params": {
+    "hidden_layer_sizes": [
+     64
+    ],
+    "alpha": 1e-05,
+    "learning_rate_init": 0.0003,
+    "early_stopping": false,
+    "max_iter": 1500,
+    "tol": 0.0
+   },
+   "val_q_mvar": 20.25942758395485,
+   "nonconverged": 0.0,
+   "val_mae_pg_pct": 0.16058030895043224,
+   "val_mae_vg_pu": 0.0009592740811204342,
+   "seconds": 13.7
+  },
+  {
+   "family": "mlp64",
+   "params": {
+    "hidden_layer_sizes": [
+     64
+    ],
+    "alpha": 0.001,
+    "learning_rate_init": 0.001,
+    "early_stopping": false,
+    "max_iter": 1500,
+    "tol": 0.0
+   },
+   "val_q_mvar": 23.66563958836366,
+   "nonconverged": 0.0,
+   "val_mae_pg_pct": 0.16698327030765694,
+   "val_mae_vg_pu": 0.000947494553943611,
+   "seconds": 7.0
+  },
+  {
+   "family": "mlp64",
+   "params": {
+    "hidden_layer_sizes": [
+     64
+    ],
+    "alpha": 0.001,
+    "learning_rate_init": 0.0003,
+    "early_stopping": false,
+    "max_iter": 1500,
+    "tol": 0.0
+   },
+   "val_q_mvar": 20.723674801374553,
+   "nonconverged": 0.0,
+   "val_mae_pg_pct": 0.16681413597471717,
+   "val_mae_vg_pu": 0.0009643011287952363,
+   "seconds": 12.9
+  },
+  {
+   "family": "mlp64",
+   "params": {
+    "hidden_layer_sizes": [
+     64
+    ],
+    "alpha": 0.1,
+    "learning_rate_init": 0.001,
+    "early_stopping": false,
+    "max_iter": 1500,
+    "tol": 0.0
+   },
+   "val_q_mvar": 38.449235032763156,
+   "nonconverged": 0.0,
+   "val_mae_pg_pct": 0.21181855381217762,
+   "val_mae_vg_pu": 0.0012291815656489335,
+   "seconds": 2.7
+  },
+  {
+   "family": "mlp64",
+   "params": {
+    "hidden_layer_sizes": [
+     64
+    ],
+    "alpha": 0.1,
+    "learning_rate_init": 0.0003,
+    "early_stopping": false,
+    "max_iter": 1500,
+    "tol": 0.0
+   },
+   "val_q_mvar": 36.35108939797947,
+   "nonconverged": 0.0,
+   "val_mae_pg_pct": 0.2182827032755841,
+   "val_mae_vg_pu": 0.001232861484196482,
+   "seconds": 4.9
+  },
+  {
+   "family": "mlp256",
+   "params": {
+    "hidden_layer_sizes": [
+     256,
+     256
+    ],
+    "early_stopping": true,
+    "max_iter": 600,
+    "n_iter_no_change": 30
+   },
+   "val_q_mvar": 118.44393389442071,
+   "nonconverged": 0.0,
+   "val_mae_pg_pct": 0.41488039986921543,
+   "val_mae_vg_pu": 0.0018888375620779263,
+   "seconds": 2.6
+  },
+  {
+   "family": "mlp256",
+   "params": {
+    "hidden_layer_sizes": [
+     256,
+     256
+    ],
+    "alpha": 1e-05,
+    "learning_rate_init": 0.001,
+    "early_stopping": false,
+    "max_iter": 1500,
+    "tol": 0.0
+   },
+   "val_q_mvar": 34.08292369832447,
+   "nonconverged": 0.0,
+   "val_mae_pg_pct": 0.16663375884650067,
+   "val_mae_vg_pu": 0.0008030990642482001,
+   "seconds": 9.5
+  },
+  {
+   "family": "mlp256",
+   "params": {
+    "hidden_layer_sizes": [
+     256,
+     256
+    ],
+    "alpha": 1e-05,
+    "learning_rate_init": 0.0003,
+    "early_stopping": false,
+    "max_iter": 1500,
+    "tol": 0.0
+   },
+   "val_q_mvar": 30.811772639552483,
+   "nonconverged": 0.0,
+   "val_mae_pg_pct": 0.16496054081677294,
+   "val_mae_vg_pu": 0.0008388679855403831,
+   "seconds": 24.1
+  },
+  {
+   "family": "mlp256",
+   "params": {
+    "hidden_layer_sizes": [
+     256,
+     256
+    ],
+    "alpha": 0.001,
+    "learning_rate_init": 0.001,
+    "early_stopping": false,
+    "max_iter": 1500,
+    "tol": 0.0
+   },
+   "val_q_mvar": 36.627337854566456,
+   "nonconverged": 0.0,
+   "val_mae_pg_pct": 0.16207900621942511,
+   "val_mae_vg_pu": 0.0008326209981289667,
+   "seconds": 8.8
+  },
+  {
+   "family": "mlp256",
+   "params": {
+    "hidden_layer_sizes": [
+     256,
+     256
+    ],
+    "alpha": 0.001,
+    "learning_rate_init": 0.0003,
+    "early_stopping": false,
+    "max_iter": 1500,
+    "tol": 0.0
+   },
+   "val_q_mvar": 37.696151446121966,
+   "nonconverged": 0.0,
+   "val_mae_pg_pct": 0.16917268024600282,
+   "val_mae_vg_pu": 0.0008692942333226243,
+   "seconds": 17.5
+  },
+  {
+   "family": "mlp256",
+   "params": {
+    "hidden_layer_sizes": [
+     256,
+     256
+    ],
+    "alpha": 0.1,
+    "learning_rate_init": 0.001,
+    "early_stopping": false,
+    "max_iter": 1500,
+    "tol": 0.0
+   },
+   "val_q_mvar": 29.265288995698896,
+   "nonconverged": 0.0,
+   "val_mae_pg_pct": 0.15975816428410022,
+   "val_mae_vg_pu": 0.0007810838863851761,
+   "seconds": 10.0
+  },
+  {
+   "family": "mlp256",
+   "params": {
+    "hidden_layer_sizes": [
+     256,
+     256
+    ],
+    "alpha": 0.1,
+    "learning_rate_init": 0.0003,
+    "early_stopping": false,
+    "max_iter": 1500,
+    "tol": 0.0
+   },
+   "val_q_mvar": 44.369168033291096,
+   "nonconverged": 0.0,
+   "val_mae_pg_pct": 0.17343564521262222,
+   "val_mae_vg_pu": 0.0008940628918266894,
+   "seconds": 12.8
+  }
+ ]
+}

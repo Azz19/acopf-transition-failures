@@ -1,5 +1,7 @@
 # Active-Constraint Transition Failures in Learned AC-OPF: Experiment and Paper Design
 
+> **Correction, Nov 5, 2026.** The pilot MLPs below were underfit, because early stopping halted them near 57 epochs. With full training on 118 buses, H2 and H1 held, but the ridge inversion behind H3 reversed: ridge had 34.5 MVAr of Q violation against 16.3 to 21.9 for the MLPs. The fallback paper built on H3 is no longer viable. Corrected results are in `results/fully_trained/`. Pilot figures below describe the early-stopped models unless they are corrected elsewhere.
+
 Nov 4, 2026 · @Damilola Agboola
 
 ## Bottom line
