@@ -22,7 +22,8 @@ pr=np.maximum(g[:,PMAX]-g[:,PMIN],1.0);qr=np.maximum(g[:,QMAX]-g[:,QMIN],1.0)
 slack_g=np.where(bus[gb,1]==3)[0]
 clamped=np.zeros(typ.size,bool);clamped[:2*ng]=True;clamped[slack_g]=False;clamped[ng+slack_g]=False
 clamped[4*ng+gb]=True;clamped[4*ng+nb+gb]=True
-A=lambda S:np.array([(np.abs(r["mu"])>1e-4).astype(np.int8) for r in S])
+TAU=float(os.environ.get("ACOPF_TAU","1e-4"))  # Active-set tolerance; set to test sensitivity.
+A=lambda S:np.array([(np.abs(r["mu"])>TAU).astype(np.int8) for r in S])
 Atr=A(train);Aall=A(allS);f=Atr.mean(0);sw=(f>0)&(f<1)&~clamped
 Yt=np.array([np.r_[r["pg"],r["vg"]] for r in allS]); load=np.array([r["pd"].sum() for r in allS])/bus[:,PD].sum()
 V={}
@@ -119,4 +120,4 @@ out["C4_reg"]=dict(mae=dict(b=float(rr.params[0]),p=float(rr.pvalues[0])),diff=d
 a=[out["models"][m]["mae_vg_pu"] for m in mn];d=[out["C4"][m]["diff_vg"] for m in mn];q=[out["models"][m]["q_viol_mvar"] for m in mn]
 from scipy.stats import spearmanr
 out["C4_between"]=dict(rho_mae_q=float(spearmanr(a,q)[0]),rho_diff_q=float(spearmanr(d,q)[0]),n_models=len(mn))
-json.dump(out,open(f"claims_{name}{tag}.json","w"),indent=1);print(json.dumps(out))
+json.dump(out,open(f"claims_{name}{tag}"+(f"_tau{TAU:g}" if "ACOPF_TAU" in os.environ else "")+".json","w"),indent=1);print(json.dumps(out))
