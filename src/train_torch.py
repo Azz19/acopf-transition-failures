@@ -213,10 +213,13 @@ def main():
     ap.add_argument("--epoch-scale", type=float, default=1.0, help="for quick tests only")
     ap.add_argument("--val-fraction", type=float, default=0.15)
     ap.add_argument("--rho", type=float, nargs="+", help="Lagrangian penalty steps; 0 is a no-penalty diagnostic, never selected")
+    ap.add_argument("--no-penalty", action="store_true", help="train the full-state MLP without penalties, labeled fsmlp")
     ap.add_argument("--tag", default="torch", help="results are written to eval_<case>_<tag>.pkl and tuned_<case>_<tag>.json")
     ap.add_argument("--pglib-dir", default=os.environ.get("PGLIB_DIR", "pglib-opf"))
     args = ap.parse_args()
 
+    if args.no_penalty:
+        args.rho = [0.0]
     if args.rho:
         GRID["lagmlp"] = [{"hidden": 256, "rho": r, "weight_decay": 1e-5} for r in args.rho]
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -295,7 +298,7 @@ def main():
                            val_mae_vg_pu=float(np.abs(clipped[val, ng:] - y_short[val, ng:]).mean()), seconds=round(time.time() - t0, 1))
                 records.append(row)
                 print(json.dumps(row), flush=True)
-            usable = [r for r in records if r["val_q_mvar"] is not None and r["cfg"].get("rho", 1) > 0]
+            usable = [r for r in records if r["val_q_mvar"] is not None and (args.no_penalty or r["cfg"].get("rho", 1) > 0)]
             eligible = [r for r in usable if r["nonconverged"] <= NONCONVERGENCE_LIMIT] or usable
             best = min(eligible, key=lambda r: r["val_q_mvar"])["cfg"]
             log[family] = dict(best=best, records=records)
@@ -305,8 +308,9 @@ def main():
                 t0 = time.time()
                 pred = TRAINERS[family](best, seed + 1, final, grid, device, epochs)
                 rec, clipped = recover_all(pred, held_out)
-                output[f"{family}_s{seed}"] = dict(yh=clipped[held_out].astype(np.float32), rec=rec)
-                print(f"{family}_s{seed} seconds {time.time() - t0:.0f} nonconverged {sum(x is None for x in rec)}", flush=True)
+                label = "fsmlp" if args.no_penalty else family
+                output[f"{label}_s{seed}"] = dict(yh=clipped[held_out].astype(np.float32), rec=rec)
+                print(f"{label}_s{seed} seconds {time.time() - t0:.0f} nonconverged {sum(x is None for x in rec)}", flush=True)
                 with open(f"eval_{args.case}_{args.tag}.pkl", "wb") as fh:
                     pickle.dump(output, fh)
         with open(f"tuned_{args.case}_{args.tag}.json", "w") as fh:
