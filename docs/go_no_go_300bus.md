@@ -18,3 +18,14 @@ Approved Nov 5, 2026, before `claims.py` was run on the 300-bus data.
 ## Extension to the Lagrangian MLP and GNN
 
 Set Nov 5, 2026, before either family was trained on the 300-bus data. H2 extends to a family if its depth slope is at least 0.1 with a 95% CI excluding 0 and at least 50 clean episodes. This does not change the go decision. A failure limits what the paper can claim about those families and must be reported.
+
+## Second independent system: 200_activ
+
+Set Nov 6, 2026, before full data generation, tuning or scoring on this system. Only a 30-instance solver test with a separate seed has been run.
+
+**H2 replicates** if the depth slope is at least 0.1 with a 95% CI excluding 0 in both tuned scikit-learn MLP families (`mlp64`, `mlp256`), with at least 50 clean episodes. The test, recovery, thresholds and episode definition match the 300-bus rule. Ridge and the full-state MLP are reported as exploratory.
+
+- **Inconclusive:** fewer than 50 clean episodes. Add paths without changing the test.
+- **Not replicated:** with at least 50 episodes, the slope is below 0.1 or the CI includes 0 in either MLP family. The paper must then limit its H2 claim to the 300-bus case and report this result.
+
+**Data:** `gen_ipopt.py 200_activ --random 2400 --paths 50 --points 41 --seed 2027`, using the default load range (global factor 0.85 to 1.15); 1,800 training instances.
