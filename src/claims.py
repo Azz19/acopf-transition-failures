@@ -13,7 +13,8 @@ case=load_case(os.path.join(os.environ.get("PGLIB_DIR","pglib-opf"),f"pglib_opf_
 res=[r for r in pickle.load(open(f"data_{name}.pkl","rb")) if r and r["ok"]]
 rand=[r for r in res if r["kind"]=="rand"]; path=[r for r in res if r["kind"]=="path"]
 train,test=rand[:ntrain],rand[ntrain:]; allS=test+path; n=len(test)
-ev=pickle.load(open(f"eval_{name}.pkl","rb")); mn=list(ev)
+tag=f"_{sys.argv[3]}" if len(sys.argv)>3 else ""
+ev=pickle.load(open(f"eval_{name}{tag}.pkl","rb")); mn=list(ev)
 g=case["gen"];bus=case["bus"];br=case["branch"];nb,ng,nl=bus.shape[0],g.shape[0],br.shape[0]
 ids={int(b):i for i,b in enumerate(bus[:,0])}; gb=np.array([ids[int(x)] for x in g[:,0]])
 typ=np.array(["Pmax"]*ng+["Pmin"]*ng+["Qmax"]*ng+["Qmin"]*ng+["Vmax"]*nb+["Vmin"]*nb+["Sf"]*nl+["St"]*nl)
@@ -30,7 +31,8 @@ for m in mn:
     for i,x in enumerate(ev[m]["rec"]):
         if x is not None:a[i]=-x[0]
     V[m]=a
-fam={"mlp256":[m for m in mn if m.startswith("mlp256")],"mlp64":[m for m in mn if m.startswith("mlp64")],"ridge":["ridge"]}
+fam={}
+for m in mn: fam.setdefault(m.split("_s")[0],[]).append(m)
 pid=np.array([r["pid"] for r in path]);tt=np.array([r["t"] for r in path]);Ap=Aall[n:];NP=max(tt)+1 if len(tt) else 0
 out={"case":name,"n_test":n,"n_path_pts":len(path),"n_switching":int(sw.sum()),"switch_by_type":{t:int((sw&(typ==t)).sum()) for t in np.unique(typ)},
      "novel_frac":float(np.mean([Aall[i][(f>0)&(f<1)].tobytes() not in set(a[(f>0)&(f<1)].tobytes() for a in Atr) for i in range(n)]))}
@@ -117,4 +119,4 @@ out["C4_reg"]=dict(mae=dict(b=float(rr.params[0]),p=float(rr.pvalues[0])),diff=d
 a=[out["models"][m]["mae_vg_pu"] for m in mn];d=[out["C4"][m]["diff_vg"] for m in mn];q=[out["models"][m]["q_viol_mvar"] for m in mn]
 from scipy.stats import spearmanr
 out["C4_between"]=dict(rho_mae_q=float(spearmanr(a,q)[0]),rho_diff_q=float(spearmanr(d,q)[0]),n_models=len(mn))
-json.dump(out,open(f"claims_{name}.json","w"),indent=1);print(json.dumps(out))
+json.dump(out,open(f"claims_{name}{tag}.json","w"),indent=1);print(json.dumps(out))

@@ -1,6 +1,6 @@
 """Robustness checks for H2. Run after claims.py, from the folder holding its inputs.
 
-Usage: python robust.py 300_ieee 1800
+Usage: python robust.py 300_ieee 1800 [tag]
 
 Within one load path, total load changes linearly with path position, and so does depth.
 Episode fixed effects therefore separate them only through curvature. Checks R3, R4 and R5
@@ -39,7 +39,8 @@ path = [r for r in res if r["kind"] == "path"]
 train, test = rand[:ntrain], rand[ntrain:]
 all_s = test + path
 n = len(test)
-ev = pickle.load(open(f"eval_{name}.pkl", "rb"))
+tag = f"_{sys.argv[3]}" if len(sys.argv) > 3 else ""
+ev = pickle.load(open(f"eval_{name}{tag}.pkl", "rb"))
 gen, bus, branch = case["gen"], case["bus"], case["branch"]
 nb, ng, nl = bus.shape[0], gen.shape[0], branch.shape[0]
 ids = {int(b): i for i, b in enumerate(bus[:, 0])}
@@ -241,9 +242,11 @@ def analyze(models):
     return out
 
 
-families = {"mlp256": [m for m in ev if m.startswith("mlp256")], "mlp64": [m for m in ev if m.startswith("mlp64")], "ridge": ["ridge"]}
+families = {}
+for m in ev:
+    families.setdefault(m.split("_s")[0], []).append(m)
 results = {fam: analyze(models) for fam, models in families.items()}
-with open(f"robust_{name}.json", "w") as fh:
+with open(f"robust_{name}{tag}.json", "w") as fh:
     json.dump(results, fh, indent=1)
 for fam, r in results.items():
     print(f"\n=== {fam}: {r['episodes']} episodes; raw near/deep % of range {r['raw_near_deep_pct']}")
