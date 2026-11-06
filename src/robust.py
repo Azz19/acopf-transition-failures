@@ -13,6 +13,8 @@ R4 placebo: always-active constraints given the same pseudo-activation pattern
 R5 random test set, no paths: violation against the constraint's multiplier, with load control
 R6 slope by constraint type
 R7 under-bending: do steeper pre-activation approaches produce steeper post-activation growth?
+R8 depth as load distance from activation (% of base load norm), not path steps
+R9 R7 with approach and growth both per unit of load distance
 All checks here are exploratory. They do not change the locked go/no-go decision.
 """
 import json
@@ -122,6 +124,41 @@ def active_rows(v, eps):
     return rows[np.isfinite(rows[:, 4])] if len(rows) else rows
 
 
+x_path = np.array([np.r_[r["pd"], r["qd"]] for r in path])
+x_norm = np.linalg.norm(np.r_[bus[:, PD], bus[:, 3]])
+
+
+def load_distance(eps, v):
+    """Active-side rows with depth as % load distance from the activation midpoint."""
+    rows = []
+    for e, (k, c, b, _) in enumerate(eps):
+        idx = paths[k]
+        mid = 0.5 * (x_path[idx[b]] + x_path[idx[b + 1]])
+        for j in range(n_points):
+            if a_path[idx[j], c] == 1 and np.isfinite(v[n + idx[j], c]):
+                rows.append((k, c, e, 100 * np.linalg.norm(x_path[idx[j]] - mid) / x_norm, v[n + idx[j], c], load[n + idx[j]]))
+    return np.array(rows)
+
+
+def load_underbending(eps, v, D):
+    """Episode-level approach and growth, both measured against load distance."""
+    approach, growth = [], []
+    for e, (k, c, b, _) in enumerate(eps):
+        idx = paths[k]
+        mid = 0.5 * (x_path[idx[b]] + x_path[idx[b + 1]])
+        inactive = np.array([j for j in range(n_points) if a_path[idx[j], c] == 0])
+        act = D[D[:, 2] == e]
+        if inactive.size >= 5 and act.shape[0] >= 5 and np.ptp(act[:, 3]) > 0:
+            dist = 100 * np.linalg.norm(x_path[idx[inactive]] - mid, axis=1) / x_norm
+            if np.ptp(dist) > 0:
+                approach.append(abs(np.polyfit(dist, slack_all[n + idx[inactive], c], 1)[0]))
+                growth.append(np.polyfit(np.log1p(act[:, 3]), np.log10(act[:, 4] + 1e-4), 1)[0])
+    if len(approach) < 10:
+        return None
+    rho, p = spearmanr(approach, growth)
+    return dict(rho=round(float(rho), 3), p=float(f"{p:.3g}"), episodes=len(approach))
+
+
 def analyze(models):
     v = violations(models)
     eps = episodes(switching)
@@ -195,6 +232,11 @@ def analyze(models):
                                       share_positive_growth=round(float(np.mean(np.array(growth) > 0)), 3))
     else:
         out["R7_underbending"] = None
+    D = load_distance(eps, v)
+    logdist, logy_d = np.log1p(D[:, 3]), np.log10(D[:, 4] + 1e-4)
+    out["R8_load_distance_episode_fe"] = fit(logy_d, [logdist, D[:, 5]], D[:, 2], D[:, 0])
+    out["R8_load_distance_constraint_fe"] = fit(logy_d, [logdist, D[:, 5]], D[:, 1], D[:, 0])
+    out["R9_underbending_per_load"] = load_underbending(eps, v, D)
     out["episodes"] = len(eps)
     return out
 
