@@ -17,6 +17,7 @@ import json
 import multiprocessing as mp
 import os
 import pickle
+import sys
 import warnings
 
 warnings.filterwarnings("ignore")
@@ -341,6 +342,12 @@ def main():
 
     with open(f"mechanism_{name}.json", "w") as fh:
         json.dump(out, fh, indent=1)
+    try:
+        with open(f"figdata_{name}.pkl", "wb") as fh:
+            pickle.dump(dict(fams=fams, fig_a=fig_a, fig_b=fig_b, episodes=episodes, path=path, slk_opt=slk_opt,
+                             typ=typ, gen=gen, ng=ng, out=out), fh)
+    except Exception as exc:  # figure data is a convenience, never fatal
+        print("figdata not saved:", exc, flush=True)
     make_figures(name, fams, fig_a, fig_b, episodes, path, slk_opt, typ, gen, ng, out)
     print("done", flush=True)
 
@@ -371,7 +378,7 @@ def make_figures(name, fams, fig_a, fig_b, episodes, path, slk_opt, typ, gen, ng
             ax[0].plot(dist[o], q_opt[o], color="k", label="Optimal")
             ax[0].plot(dist[o], q_hat[o], color=colors[lead], label=f"{LABELS[lead]}, recovered")
             ax[0].set_ylabel("Generator Q (MVAr)")
-            ax[0].set_title(f"(a) Representative episode: {typ[c]} of generator {g + 1}, bend ratio {rep['ratio']:.2f}", loc="left", fontsize=7)
+            ax[0].set_title(f"(a) Example: {typ[c]}, gen. {g + 1}, bend ratio {rep['ratio']:.2f}", loc="left", fontsize=7)
         ax[0].axvline(0, color="#999", lw=0.6)
         ax[0].set_xlabel("Load distance from activation (% of base load)")
         ax[0].legend(frameon=False, loc="best")
@@ -414,6 +421,8 @@ def make_figures(name, fams, fig_a, fig_b, episodes, path, slk_opt, typ, gen, ng
             ax[0].scatter(fb["sens"][s], 100 * fb["viol"][s], s=3, color=col, alpha=0.6, lw=0, label=f"{lab} steps")
         ax[0].set_xscale("log")
         ax[0].set_yscale("log")
+        from matplotlib.ticker import NullFormatter
+        ax[0].xaxis.set_minor_formatter(NullFormatter())
         ax[0].set_xlabel("Q sensitivity to scaled controls (range per unit)")
         ax[0].set_ylabel("Recovered Q violation (% of range)")
         ax[0].legend(frameon=False, title="Depth", fontsize=6, title_fontsize=6, markerscale=3)
@@ -440,4 +449,9 @@ def make_figures(name, fams, fig_a, fig_b, episodes, path, slk_opt, typ, gen, ng
 
 
 if __name__ == "__main__":
-    main()
+    if len(sys.argv) == 3 and sys.argv[1] == "--replot":
+        with open(f"figdata_{sys.argv[2]}.pkl", "rb") as fh:
+            d = pickle.load(fh)
+        make_figures(sys.argv[2], **d)
+    else:
+        main()
