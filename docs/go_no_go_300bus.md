@@ -29,3 +29,12 @@ Set Nov 6, 2026, before full data generation, tuning or scoring on this system. 
 - **Not replicated:** with at least 50 episodes, the slope is below 0.1 or the CI includes 0 in either MLP family. The paper must then limit its H2 claim to the 300-bus case and report this result.
 
 **Data:** `gen_ipopt.py 200_activ --random 2400 --paths 50 --points 41 --seed 2027`, using the default load range (global factor 0.85 to 1.15); 1,800 training instances.
+
+## Mechanism and correction criteria
+
+Set Nov 7, 2026, before `mechanism.py` or `triage.py` ran on the 300- or 200-bus data. These scripts were developed on the 118-bus pilot, so 118-bus results are exploratory. "Both MLP families" means the tuned scikit-learn `mlp64` and `mlp256` used in the locked H2 tests.
+
+- **Under-bending, measured directly:** supported on a system if, in both MLP families, the median bend ratio (learned derivative jump at activation divided by the optimal jump, Q and V episodes) is below 1 with a path-bootstrap 95% CI entirely below 1, and the median pre-activation tracking ratio lies between 0.5 and 1.5.
+- **AC sensitivity:** error amplification explains the growth only if the depth slope of log sensitivity, over all active-side points, is positive with a CI excluding 0 and is at least half the depth slope of the log linearized violation. Otherwise the growth is attributed to whichever of control-error size and alignment has a positive slope with a CI excluding 0, or reported as unexplained.
+- **Depth versus load:** the depth slope stays positive with a CI excluding 0 when comparing the same constraint within the same 1%-of-load bin across paths, with five load-pattern components as controls, in both MLP families.
+- **Selective re-solve:** active-set-aware selection has operational value on a system if, at a 20% re-solve budget, it leaves less remaining reactive violation than both random and total-load selection, with instance-bootstrap 95% CIs excluding 0, for the most accurate family. The practical tolerance is 5 MVAr per generator, 0.005 pu voltage and 2% of range or rating. Re-solved instances are assumed to reach the stored optimum; a timed warm-start sample reports cost and success.

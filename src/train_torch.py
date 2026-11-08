@@ -29,8 +29,10 @@ from common import PD, QD, PMAX, PMIN, QMAX, QMIN, VMAX, VMIN, RATE_A, load_case
 GRID = {
     "lagmlp": [{"hidden": 256, "rho": r, "weight_decay": wd} for r in (1.0, 10.0, 100.0) for wd in (0.0, 1e-5)],
     "gnn": [{"hidden": h, "layers": k} for h in (64, 128) for k in (3, 5)],
+    "gnnfs": [{"hidden": h, "layers": 5} for h in (64, 128)],
+    "pifs": [{"hidden": 256, "fixed": w, "warm": 0.5, "weight_decay": 1e-5} for w in (0.01, 0.1, 1.0)],
 }
-EPOCHS = {"lagmlp": 400, "gnn": 300}
+EPOCHS = {"lagmlp": 400, "gnn": 300, "gnnfs": 300, "pifs": 400}
 NONCONVERGENCE_LIMIT = 0.01
 BATCH_SIZE = 64
 
@@ -113,7 +115,7 @@ class GNN(nn.Module):
         self.norm = nn.ModuleList(nn.LayerNorm(hidden) for _ in range(layers))
         self.readout = nn.Sequential(nn.Linear(hidden + gen_static.shape[1], hidden), nn.ReLU(), nn.Linear(hidden, 2))
 
-    def forward(self, x):
+    def embed(self, x):
         b = x.shape[0]  # x: (B, N, 2)
         h = self.encode(torch.cat([x, self.node_static.expand(b, -1, -1)], -1))  # (B, N, H)
         edge = self.edge_static.expand(b, -1, -1)  # (B, E, Fe)
@@ -121,9 +123,29 @@ class GNN(nn.Module):
             m = message(torch.cat([h[:, self.src], h[:, self.dst], edge], -1))  # (B, E, H)
             agg = torch.zeros_like(h).index_add(1, self.dst, m) / self.counts[None, :, None]
             h = norm(h + update(torch.cat([h, agg], -1)))
+        return h  # (B, N, H)
+
+    def forward(self, x):
+        b = x.shape[0]
+        h = self.embed(x)
         gen_h = torch.cat([h[:, self.gb], self.gen_static.expand(b, -1, -1)], -1)  # (B, G, H+Fg)
         out = self.readout(gen_h)  # (B, G, 2)
         return torch.cat([out[..., 0], out[..., 1]], 1)  # (B, 2G)
+
+
+class GNNFull(GNN):
+    """GNN with a full-state output: generator (Pg, Qg) and bus (Vm, Va), ordered as y_full."""
+
+    def __init__(self, grid, node_static, gen_static, edge_static, hidden, layers):
+        super().__init__(grid, node_static, gen_static, edge_static, hidden, layers)
+        self.node_out = nn.Sequential(nn.Linear(hidden, hidden), nn.ReLU(), nn.Linear(hidden, 2))
+
+    def forward(self, x):
+        b = x.shape[0]
+        h = self.embed(x)
+        gen_h = torch.cat([h[:, self.gb], self.gen_static.expand(b, -1, -1)], -1)
+        og, on = self.readout(gen_h), self.node_out(h)  # (B, G, 2), (B, N, 2)
+        return torch.cat([og[..., 0], og[..., 1], on[..., 0], on[..., 1]], 1)  # (B, 2G + 2N)
 
 
 def zscore(a, floor=1e-9):
@@ -145,7 +167,8 @@ def train_lagmlp(cfg, seed, data, grid, device, epochs):
     sched = torch.optim.lr_scheduler.CosineAnnealingLR(opt, epochs)
     idx = torch.as_tensor(tr, device=device)
     lam = None
-    for _ in range(epochs):
+    fixed, warm = cfg.get("fixed"), int(cfg.get("warm", 0.0) * epochs)
+    for epoch in range(epochs):
         total, count = None, 0
         for batch in idx[torch.randperm(len(idx), device=device)].split(BATCH_SIZE):
             pred = model(xt[batch])
@@ -158,14 +181,18 @@ def train_lagmlp(cfg, seed, data, grid, device, epochs):
                               torch.relu(vm - grid.vmax), torch.relu(grid.vmin - vm)], 1)
             if lam is None:
                 lam = torch.zeros(viol.shape[1], device=device)
-            loss = nn.functional.mse_loss(pred, yt[batch]) + (lam * viol).mean()
+            if fixed is not None:  # physics fine-tuning: plain MSE first, then a fixed penalty
+                loss = nn.functional.mse_loss(pred, yt[batch]) + (0.0 if epoch < warm else fixed) * viol.mean()
+            else:
+                loss = nn.functional.mse_loss(pred, yt[batch]) + (lam * viol).mean()
             opt.zero_grad()
             loss.backward()
             opt.step()
             part = viol.detach().sum(0)
             total = part if total is None else total + part
             count += len(batch)
-        lam = (lam + cfg["rho"] * total / count).clamp_max(1e4)
+        if fixed is None:
+            lam = (lam + cfg["rho"] * total / count).clamp_max(1e4)
         sched.step()
     model.eval()
     with torch.no_grad():
@@ -200,7 +227,36 @@ def train_gnn(cfg, seed, data, grid, device, epochs):
         return torch.cat([model(b) for b in xt.split(256)]).mul(st).add(mt).cpu().numpy()
 
 
-TRAINERS = {"lagmlp": train_lagmlp, "gnn": train_gnn}
+def train_gnnfs(cfg, seed, data, grid, device, epochs):
+    torch.manual_seed(seed)
+    tr = data["fit"]
+    y = data["y_full"]
+    ng, nb = grid.ng, grid.nb
+    mean, scale = y[tr].mean(0), np.maximum(y[tr].std(0), data["full_floor"])
+    pd, qd = data["pd"], data["qd"]
+    pm, ps = pd[tr].mean(0), np.maximum(pd[tr].std(0), 1e-6)
+    qm, qs = qd[tr].mean(0), np.maximum(qd[tr].std(0), 1e-6)
+    t = lambda a: torch.as_tensor(a, dtype=torch.float32, device=device)
+    xt = t(np.stack([(pd - pm) / ps, (qd - qm) / qs], -1))  # (S, N, 2)
+    yt, mt, st = t((y - mean) / scale), t(mean), t(scale)
+    model = GNNFull(grid, data["node_static"].to(device), data["gen_static"].to(device), data["edge_static"].to(device), cfg["hidden"], cfg["layers"]).to(device)
+    opt = torch.optim.Adam(model.parameters(), lr=1e-3)
+    sched = torch.optim.lr_scheduler.CosineAnnealingLR(opt, epochs)
+    idx = torch.as_tensor(tr, device=device)
+    for _ in range(epochs):
+        for batch in idx[torch.randperm(len(idx), device=device)].split(BATCH_SIZE):
+            loss = nn.functional.mse_loss(model(xt[batch]), yt[batch])
+            opt.zero_grad()
+            loss.backward()
+            opt.step()
+        sched.step()
+    model.eval()
+    with torch.no_grad():
+        out = torch.cat([model(b) for b in xt.split(256)]).mul(st).add(mt).cpu().numpy()
+    return np.c_[out[:, :ng], out[:, 2 * ng:2 * ng + nb][:, grid.gb_np]]
+
+
+TRAINERS = {"lagmlp": train_lagmlp, "gnn": train_gnn, "gnnfs": train_gnnfs, "pifs": train_lagmlp}
 
 
 def main():

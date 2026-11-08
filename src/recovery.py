@@ -2,7 +2,7 @@
 import numpy as np
 from pypower.api import runpf
 
-from common import PD, PG, QD, RATE_A, VG, VM, VA, PF_OPT, load_case, slacks
+from common import PD, PG, QD, QG, RATE_A, VG, VM, VA, PF_OPT, load_case, slacks
 
 _case, _gb = None, None
 
@@ -45,3 +45,14 @@ def angles(args):
     pd, qd, pg, vg = args
     result = _run(pd, qd, pg, vg)
     return None if result is None else result["bus"][:, VA]
+
+
+def pf_state(args):
+    """Signed normalized slacks, Qg, Pg, bus Vm and Va (degrees) after AC power flow, or None."""
+    pd, qd, pg, vg = args
+    result = _run(pd, qd, pg, vg)
+    if result is None:
+        return None
+    f32 = lambda a: np.asarray(a, dtype=np.float32)
+    return (f32(slacks(result, _case["baseMVA"])), f32(result["gen"][:, QG]), f32(result["gen"][:, PG]),
+            f32(result["bus"][:, VM]), f32(result["bus"][:, VA]))
