@@ -86,7 +86,15 @@ def boot_slope(y, d, load, fixed, cluster, reps, rng):
 
 
 def slope(x, y):
-    return float(np.polyfit(x, y, 1)[0]) if np.ptp(x) > 0 else np.nan
+    x, y = np.asarray(x, float), np.asarray(y, float)
+    ok = np.isfinite(x) & np.isfinite(y)
+    x, y = x[ok], y[ok]
+    if x.size < 2 or np.ptp(x) <= 0:
+        return np.nan
+    try:
+        return float(np.polyfit(x, y, 1)[0])
+    except (np.linalg.LinAlgError, ValueError):
+        return np.nan
 
 
 def main():
